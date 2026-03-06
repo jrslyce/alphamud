@@ -2,6 +2,9 @@ FROM node:18-alpine
 
 WORKDIR /usr/src/app
 
+# Copy root package.json for "type": "module" resolution of shared data
+COPY package.json ./
+
 # Copy server package files and install dependencies
 COPY server/package*.json ./server/
 RUN cd server && npm install

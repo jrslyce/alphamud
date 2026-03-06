@@ -91,6 +91,15 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('adminResetSimulation', () => {
+        gameState.teams.alpha.ready = false;
+        gameState.teams.omega.ready = false;
+        gameState.status = 'lobby';
+        io.emit('gameState', gameState);
+        io.emit('combatResult', null);
+        console.log('[SYS] Admin manual reset triggered');
+    });
+
     socket.on('adminStartSimulation', () => {
         if (gameState.teams.alpha.ready && gameState.teams.omega.ready) {
             gameState.status = 'combat';

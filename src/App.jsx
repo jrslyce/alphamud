@@ -49,7 +49,12 @@ export default function App() {
   if (isAdminRoute) {
     return (
       <div className="min-h-screen p-4 md:p-8 flex flex-col items-center justify-center">
-        <Admin gameState={gameState} socket={socket} />
+        <Admin
+          key={combatResult ? `admin-sim-${combatResult.log?.length}` : 'admin-lobby'}
+          gameState={gameState}
+          socket={socket}
+          combatResult={combatResult}
+        />
       </div>
     );
   }
