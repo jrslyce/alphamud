@@ -3,16 +3,23 @@ import { io } from 'socket.io-client';
 import { Cpu, Terminal, Users, Play } from 'lucide-react';
 import { Builder } from './components/Builder';
 import { CombatLog } from './components/CombatLog';
+import { Admin } from './components/Admin';
 
-const socket = io('http://localhost:4000');
+const SOCKET_URL = import.meta.env.PROD
+  ? 'https://sfc-alpha-mud-backend-372490992828.us-central1.run.app'
+  : 'http://localhost:4000';
+const socket = io(SOCKET_URL);
 
 export default function App() {
   const [connected, setConnected] = useState(false);
   const [gameState, setGameState] = useState(null);
   const [myTeam, setMyTeam] = useState(null);
   const [combatResult, setCombatResult] = useState(null);
+  const [isAdminRoute, setIsAdminRoute] = useState(false);
 
   useEffect(() => {
+    setIsAdminRoute(window.location.pathname === '/admin');
+
     function onConnect() { setConnected(true); }
     function onDisconnect() { setConnected(false); }
     function onGameState(state) { setGameState(state); }
@@ -38,6 +45,14 @@ export default function App() {
     socket.emit('joinTeam', team);
     setMyTeam(team);
   };
+
+  if (isAdminRoute) {
+    return (
+      <div className="min-h-screen p-4 md:p-8 flex flex-col items-center justify-center">
+        <Admin gameState={gameState} socket={socket} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-4 md:p-8 flex flex-col items-center justify-center space-y-8">

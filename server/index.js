@@ -60,35 +60,71 @@ io.on('connection', (socket) => {
         if (gameState.teams[team]) {
             gameState.teams[team].ready = true;
             io.emit('gameState', gameState);
+        }
+    });
 
-            if (gameState.teams.alpha.ready && gameState.teams.omega.ready) {
-                gameState.status = 'combat';
+    socket.on('adminAutoFill', async () => {
+        try {
+            const { MANIFEST, CHIPS } = await import('../src/data/gameData.js');
+
+            const randomItem = (arr) => arr[Math.floor(Math.random() * arr.length)].id;
+
+            ['alpha', 'omega'].forEach(team => {
+                gameState.teams[team].build = {
+                    thruster: randomItem(MANIFEST.thrusters),
+                    battery: randomItem(MANIFEST.batteries),
+                    fcs: randomItem(MANIFEST.fcs),
+                    core: randomItem(MANIFEST.cores),
+                    armor: randomItem(MANIFEST.armor)
+                };
+
+                // 5 random moves
+                gameState.teams[team].sequence = Array.from({ length: 5 }, () => randomItem(CHIPS));
+                gameState.teams[team].ready = true;
+            });
+
+            gameState.status = 'lobby'; // Ensure we're in lobby before combat
+            io.emit('gameState', gameState);
+
+        } catch (err) {
+            console.error('[SYS] AutoFill Error:', err);
+        }
+    });
+
+    socket.on('adminStartSimulation', () => {
+        if (gameState.teams.alpha.ready && gameState.teams.omega.ready) {
+            gameState.status = 'combat';
+            io.emit('gameState', gameState);
+
+            // Dynamically import combat engine to avoid server restart issues
+            import('./combatEngine.js').then(module => {
+                const { runSimulation } = module;
+                try {
+                    const result = runSimulation(
+                        gameState.teams.alpha.build, gameState.teams.alpha.sequence,
+                        gameState.teams.omega.build, gameState.teams.omega.sequence
+                    );
+
+                    io.emit('combatResult', result);
+                } catch (err) {
+                    console.error('[SYS] Combat Engine Error:', err);
+                }
+
+                // Reset for next match after 15s
+                setTimeout(() => {
+                    gameState.teams.alpha.ready = false;
+                    gameState.teams.omega.ready = false;
+                    gameState.status = 'lobby';
+                    io.emit('gameState', gameState);
+                    io.emit('combatResult', null);
+                }, 15000);
+            }).catch(err => {
+                console.error('[SYS] Import Error:', err);
+                gameState.teams.alpha.ready = false;
+                gameState.teams.omega.ready = false;
+                gameState.status = 'lobby';
                 io.emit('gameState', gameState);
-
-                // Dynamically import combat engine to avoid server restart issues
-                import('./combatEngine.js').then(module => {
-                    const { runSimulation } = module;
-                    try {
-                        const result = runSimulation(
-                            gameState.teams.alpha.build, gameState.teams.alpha.sequence,
-                            gameState.teams.omega.build, gameState.teams.omega.sequence
-                        );
-
-                        io.emit('combatResult', result);
-                    } catch (err) {
-                        console.error('[SYS] Combat Engine Error:', err);
-                    }
-
-                    // Reset for next match after 15s
-                    setTimeout(() => {
-                        gameState.teams.alpha.ready = false;
-                        gameState.teams.omega.ready = false;
-                        gameState.status = 'lobby';
-                        io.emit('gameState', gameState);
-                        io.emit('combatResult', null);
-                    }, 15000);
-                }).catch(err => console.error('[SYS] Import Error:', err));
-            }
+            });
         }
     });
 

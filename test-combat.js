@@ -20,6 +20,7 @@ alpha.on('connect', () => { alphaConnected = true; checkStart(); });
 omega.on('connect', () => { omegaConnected = true; checkStart(); });
 
 let stateReceived = 0;
+let adminTriggered = false; // New variable to prevent multiple triggers
 
 alpha.on('gameState', (state) => {
     if (state.teams.alpha.players.includes(alpha.id) && stateReceived === 0) {
