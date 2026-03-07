@@ -88,15 +88,6 @@ export default function App() {
     <div className={`min-h-screen transition-colors duration-1000 ${getThemeClasses()} p-4 md:p-8 flex flex-col items-center justify-center space-y-8`}>
       {getGlowOverlay()}
       <div className="relative z-10 w-full flex flex-col items-center space-y-8 w-full">
-        {!isAdminRoute && (
-          <button
-            onClick={() => window.location.href = '/admin'}
-            className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-700 hover:border-cyan-500 text-slate-400 hover:text-cyan-400 rounded-lg text-xs font-bold uppercase tracking-widest transition-all shadow-lg hover:shadow-cyan-500/20"
-          >
-            <Settings size={14} />
-            Admin
-          </button>
-        )}
         <div className="text-center space-y-4">
           <div className="inline-flex items-center justify-center p-4 bg-slate-900 border border-slate-800 rounded-full shadow-[0_0_30px_rgba(6,182,212,0.1)]">
             <Cpu className="text-cyan-500" size={48} />
@@ -144,6 +135,19 @@ export default function App() {
                   </div>
                 )}
                 <span className="text-slate-400 text-xs mt-2 block hidden">{gameState?.teams?.omega?.players?.length || 0} Architects Online</span>
+              </button>
+            </div>
+
+            <div className="mt-4">
+              <button
+                onClick={() => window.location.href = '/admin'}
+                className="w-full p-4 rounded-xl border border-slate-700 bg-slate-950 hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all font-bold group text-left flex items-center justify-between"
+              >
+                <div>
+                  <span className="block text-slate-500 text-[10px] uppercase tracking-widest mb-1">System Control</span>
+                  <span className="text-white group-hover:text-emerald-400 block text-lg uppercase">Global Administrator</span>
+                </div>
+                <Settings className="text-slate-600 group-hover:text-emerald-500 group-hover:rotate-90 transition-all" size={24} />
               </button>
             </div>
           </div>

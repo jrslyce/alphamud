@@ -157,6 +157,14 @@ export function Admin({ gameState, socket, combatResult }) {
                             <><Play size={20} fill="currentColor" /> LAUNCH</>
                         )}
                     </button>
+
+                    {!combatResult && (
+                        <div className="ml-4 flex items-center gap-2 text-slate-500 animate-in slide-in-from-left duration-700">
+                            <span className="text-[10px] font-black uppercase tracking-widest border-l border-slate-800 pl-4 py-1">
+                                To run a sim hit <span className="text-cyan-500 italic">autofill</span> and then <span className="text-red-500 italic">launch</span>.
+                            </span>
+                        </div>
+                    )}
                 </div>
             </div>
 
