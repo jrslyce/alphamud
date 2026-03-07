@@ -91,7 +91,7 @@ export default function App() {
         {!isAdminRoute && (
           <button
             onClick={() => window.location.href = '/admin'}
-            className="absolute top-4 right-4 flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-700 hover:border-cyan-500 text-slate-400 hover:text-cyan-400 rounded-lg text-xs font-bold uppercase tracking-widest transition-all shadow-lg hover:shadow-cyan-500/20"
+            className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-700 hover:border-cyan-500 text-slate-400 hover:text-cyan-400 rounded-lg text-xs font-bold uppercase tracking-widest transition-all shadow-lg hover:shadow-cyan-500/20"
           >
             <Settings size={14} />
             Admin
