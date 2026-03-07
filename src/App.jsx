@@ -180,10 +180,40 @@ export default function App() {
                 />
 
                 {gameState?.teams[myTeam]?.ready && (
-                  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-8 text-center space-y-8 animate-in fade-in duration-300">
+                  <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-8 text-center space-y-8 animate-in fade-in duration-300">
                     <Play className="text-cyan-500 animate-pulse" size={64} />
                     <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-widest">{myTeam} UPLINK LOCKED</h2>
-                    <p className="text-slate-400 font-mono text-lg">Awaiting opposing force validation...</p>
+                    <p className="text-slate-400 font-mono text-lg max-w-xl">
+                      {gameState?.teams[myTeam === 'alpha' ? 'omega' : 'alpha']?.ready
+                        ? "Both combatants are primed and ready for engagement. Initiate simulation?"
+                        : "Awaiting opposing force validation. You may configure the opposition or head to Command."}
+                    </p>
+
+                    <div className="flex flex-wrap items-center justify-center gap-4">
+                      {gameState?.teams[myTeam === 'alpha' ? 'omega' : 'alpha']?.ready ? (
+                        <button
+                          onClick={() => socket.emit('adminStartSimulation')}
+                          className="px-8 py-4 bg-red-600 hover:bg-red-500 text-white rounded-xl font-black italic tracking-widest transition-all scale-110 shadow-[0_0_30px_rgba(220,38,38,0.4)] hover:scale-125"
+                        >
+                          LAUNCH COMBAT
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => joinTeam(myTeam === 'alpha' ? 'omega' : 'alpha')}
+                            className="px-6 py-3 bg-slate-900 border border-slate-700 hover:border-cyan-500 text-white rounded-xl font-bold transition-all"
+                          >
+                            JOIN {myTeam === 'alpha' ? 'OMEGA' : 'ALPHA'} SECTOR
+                          </button>
+                          <button
+                            onClick={() => window.location.href = '/admin'}
+                            className="px-6 py-3 bg-slate-900 border border-slate-700 hover:border-emerald-500 text-white rounded-xl font-bold transition-all"
+                          >
+                            GO TO ADMIN
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
               </>
