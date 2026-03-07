@@ -25,7 +25,8 @@ const gameState = {
         alpha: { players: [], build: {}, sequence: [null, null, null, null, null] },
         omega: { players: [], build: {}, sequence: [null, null, null, null, null] }
     },
-    status: 'lobby' // 'lobby', 'building', 'combat'
+    status: 'lobby', // 'lobby', 'building', 'combat'
+    homeTeam: 'neutral' // 'alpha', 'omega', or 'neutral'
 };
 
 const matchHistory = []; // full match objects including logs, up to 50
@@ -87,6 +88,8 @@ io.on('connection', (socket) => {
                 gameState.teams[team].ready = true;
             });
 
+            // Randomize home team on autofill
+            gameState.homeTeam = Math.random() > 0.5 ? 'alpha' : 'omega';
             gameState.status = 'lobby'; // Ensure we're in lobby before combat
             io.emit('gameState', gameState);
 
@@ -99,9 +102,15 @@ io.on('connection', (socket) => {
         gameState.teams.alpha.ready = false;
         gameState.teams.omega.ready = false;
         gameState.status = 'lobby';
+        gameState.homeTeam = 'neutral';
         io.emit('gameState', gameState);
         io.emit('combatResult', null);
         console.log('[SYS] Admin manual reset triggered');
+    });
+
+    socket.on('adminSetHomeTeam', (team) => {
+        gameState.homeTeam = team;
+        io.emit('gameState', gameState);
     });
 
     socket.on('adminStartSimulation', () => {

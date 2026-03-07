@@ -73,6 +73,10 @@ export function Admin({ gameState, socket, combatResult }) {
         socket.emit('adminAutoFill');
     };
 
+    const handleSetHomeTeam = (e) => {
+        socket.emit('adminSetHomeTeam', e.target.value);
+    };
+
     return (
         <div className="w-full max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-slate-800 pb-8">
@@ -93,6 +97,20 @@ export function Admin({ gameState, socket, combatResult }) {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2 px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl">
+                        <Shield className="text-slate-500" size={16} />
+                        <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Home:</span>
+                        <select
+                            className="bg-transparent text-white text-sm font-bold uppercase cursor-pointer outline-none focus:ring-0"
+                            value={gameState?.homeTeam || 'neutral'}
+                            onChange={handleSetHomeTeam}
+                        >
+                            <option value="neutral" className="bg-slate-900 text-slate-400">Neutral Site</option>
+                            <option value="alpha" className="bg-slate-900 text-cyan-400">Team Alpha</option>
+                            <option value="omega" className="bg-slate-900 text-orange-400">Team Omega</option>
+                        </select>
+                    </div>
+
                     <button onClick={handleAutoFill} className="group flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-500 text-white rounded-xl font-bold transition-all shadow-lg hover:shadow-cyan-500/10">
                         <UserPlus size={18} className="text-cyan-500 group-hover:scale-110 transition-transform" />
                         Auto-Fill Units
