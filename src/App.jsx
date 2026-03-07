@@ -89,9 +89,11 @@ export default function App() {
       {getGlowOverlay()}
       <div className="relative z-10 w-full flex flex-col items-center space-y-8 w-full">
         <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center p-4 bg-slate-900 border border-slate-800 rounded-full shadow-[0_0_30px_rgba(6,182,212,0.1)]">
-            <Cpu className="text-cyan-500" size={48} />
-          </div>
+          {!combatResult && (
+            <div className="inline-flex items-center justify-center p-4 bg-slate-900 border border-slate-800 rounded-full shadow-[0_0_30px_rgba(6,182,212,0.1)]">
+              <Cpu className="text-cyan-500" size={48} />
+            </div>
+          )}
 
           <h1 className="text-6xl font-black text-white tracking-tighter">
             SFC ALPHA <span className="text-cyan-500">MUD</span>
