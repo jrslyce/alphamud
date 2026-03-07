@@ -4,6 +4,7 @@ import { Cpu, Terminal, Users, Play } from 'lucide-react';
 import { Builder } from './components/Builder';
 import { CombatLog } from './components/CombatLog';
 import { Admin } from './components/Admin';
+import { HistoryViewer } from './components/HistoryViewer';
 
 const SOCKET_URL = import.meta.env.PROD
   ? 'https://sfc-alpha-mud-backend-372490992828.us-central1.run.app'
@@ -13,6 +14,7 @@ const socket = io(SOCKET_URL);
 export default function App() {
   const [connected, setConnected] = useState(false);
   const [gameState, setGameState] = useState(null);
+  const [matchHistory, setMatchHistory] = useState([]);
   const [myTeam, setMyTeam] = useState(null);
   const [combatResult, setCombatResult] = useState(null);
   const [isAdminRoute, setIsAdminRoute] = useState(false);
@@ -23,6 +25,7 @@ export default function App() {
     function onConnect() { setConnected(true); }
     function onDisconnect() { setConnected(false); }
     function onGameState(state) { setGameState(state); }
+    function onMatchHistory(history) { setMatchHistory(history); }
     function onCombatResult(res) {
       setCombatResult(res);
       if (!res) setGameState(prev => ({ ...prev, status: 'lobby' }));
@@ -31,12 +34,14 @@ export default function App() {
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('gameState', onGameState);
+    socket.on('matchHistory', onMatchHistory);
     socket.on('combatResult', onCombatResult);
 
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('gameState', onGameState);
+      socket.off('matchHistory', onMatchHistory);
       socket.off('combatResult', onCombatResult);
     };
   }, []);
@@ -55,6 +60,7 @@ export default function App() {
           socket={socket}
           combatResult={combatResult}
         />
+        <HistoryViewer matchHistory={matchHistory} socket={socket} />
       </div>
     );
   }
@@ -142,6 +148,8 @@ export default function App() {
       <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest pt-8 pb-4">
         AAA Sport • Deterministic MUD Engine v0.1.0
       </p>
+
+      {!isAdminRoute && <HistoryViewer matchHistory={matchHistory} socket={socket} />}
     </div>
   );
 }

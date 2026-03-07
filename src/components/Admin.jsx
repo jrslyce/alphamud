@@ -69,19 +69,7 @@ export function Admin({ gameState, socket, combatResult }) {
     };
 
     const handleAutoFill = () => {
-        const parts = ['core_heavy', 'armor_nano', 'battery_standard', 'fcs_standard', 'thruster_standard'];
-        const moves = ['laser_cannon', 'plasma_rifle', 'missile_swarm', 'railgun', 'energy_blade'];
-
-        ['alpha', 'omega'].forEach(team => {
-            parts.forEach((itemId, idx) => {
-                const slots = ['core', 'armor', 'battery', 'fcs', 'thruster'];
-                socket.emit('updateBuild', { team, slot: slots[idx], itemId });
-            });
-            moves.forEach((chipId, idx) => {
-                socket.emit('updateSequence', { team, idx, chipId });
-            });
-            socket.emit('setReady', { team });
-        });
+        socket.emit('adminAutoFill');
     };
 
     return (

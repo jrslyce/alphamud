@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Terminal } from 'lucide-react';
 
-export function CombatLog({ logs, winner }) {
+export function CombatLog({ logs, winner, instant = false }) {
     const [startTime, setStartTime] = useState(null);
     const [now, setNow] = useState(Date.now());
     const lastLogsKeyRef = useRef(null);
@@ -9,12 +9,14 @@ export function CombatLog({ logs, winner }) {
 
     // Drive the animation with a high-frequency ticker
     useEffect(() => {
+        if (instant) return;
         const timer = setInterval(() => setNow(Date.now()), 100);
         return () => clearInterval(timer);
-    }, []);
+    }, [instant]);
 
     // Manage startTime based on NEW logs
     useEffect(() => {
+        if (instant) return;
         const logsKey = logs ? JSON.stringify(logs).slice(0, 100) + logs.length : null;
 
         if (!logs) {
@@ -27,13 +29,13 @@ export function CombatLog({ logs, winner }) {
             lastLogsKeyRef.current = logsKey;
             setStartTime(Date.now());
         }
-    }, [logs]);
+    }, [logs, instant]);
 
     // Derive display state from elapsed time
     const elapsed = startTime ? now - startTime : 0;
     const displayCount = Math.floor(elapsed / 1000);
-    const displayedLogs = logs ? logs.slice(0, displayCount) : [];
-    const isFinished = logs ? displayCount >= logs.length : false;
+    const displayedLogs = instant ? (logs || []) : (logs ? logs.slice(0, displayCount) : []);
+    const isFinished = instant ? true : (logs ? displayCount >= logs.length : false);
 
     // Auto-scroll logic
     useEffect(() => {
@@ -78,7 +80,7 @@ export function CombatLog({ logs, winner }) {
 
             {isFinished && winner && (
                 <div className={`mt-6 p-6 rounded-xl border flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500 bg-opacity-40 backdrop-blur-sm ${winner === 'Draw' ? 'bg-slate-900 border-slate-700 text-slate-400' :
-                        winner.toLowerCase() === 'alpha' ? 'bg-cyan-900 border-cyan-500 text-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.2)]' : 'bg-orange-900 border-orange-500 text-orange-400 shadow-[0_0_30px_rgba(249,115,22,0.2)]'
+                    winner.toLowerCase() === 'alpha' ? 'bg-cyan-900 border-cyan-500 text-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.2)]' : 'bg-orange-900 border-orange-500 text-orange-400 shadow-[0_0_30px_rgba(249,115,22,0.2)]'
                     }`}>
                     <h3 className="text-3xl font-black uppercase tracking-widest text-center italic">
                         {winner === 'Draw' ? 'SIMULATION DRAW' : `VICTOR: TEAM ${winner}`}

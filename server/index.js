@@ -28,10 +28,14 @@ const gameState = {
     status: 'lobby' // 'lobby', 'building', 'combat'
 };
 
+const matchHistory = []; // full match objects including logs, up to 50
+
 io.on('connection', (socket) => {
     console.log(`[SYS] User connected: ${socket.id}`);
 
     socket.emit('gameState', gameState);
+    socket.emit('matchHistory', matchHistory.map(m => ({ id: m.id, timestamp: m.timestamp, winner: m.winner })));
+
 
     socket.on('joinTeam', (team) => {
         if (gameState.teams[team] && !gameState.teams[team].players.includes(socket.id)) {
@@ -114,7 +118,24 @@ io.on('connection', (socket) => {
                         gameState.teams.omega.build, gameState.teams.omega.sequence
                     );
 
+                    const r = Math.floor(Math.random() * 900) + 100;
+                    const dateStr = new Date().toISOString().split('T')[0];
+                    const matchId = `${r}-${dateStr}`;
+
+                    const matchData = {
+                        id: matchId,
+                        timestamp: Date.now(),
+                        winner: result.winner,
+                        log: result.log,
+                        alpha: { build: { ...gameState.teams.alpha.build }, sequence: [...gameState.teams.alpha.sequence] },
+                        omega: { build: { ...gameState.teams.omega.build }, sequence: [...gameState.teams.omega.sequence] }
+                    };
+
+                    matchHistory.unshift(matchData);
+                    if (matchHistory.length > 50) matchHistory.pop();
+
                     io.emit('combatResult', result);
+                    io.emit('matchHistory', matchHistory.map(m => ({ id: m.id, timestamp: m.timestamp, winner: m.winner })));
                 } catch (err) {
                     console.error('[SYS] Combat Engine Error:', err);
                 }
@@ -125,7 +146,7 @@ io.on('connection', (socket) => {
                     gameState.teams.omega.ready = false;
                     gameState.status = 'lobby';
                     io.emit('gameState', gameState);
-                    io.emit('combatResult', null);
+                    // Do not emit null combatResult so admin telemetry stays up
                 }, 15000);
             }).catch(err => {
                 console.error('[SYS] Import Error:', err);
@@ -143,6 +164,13 @@ io.on('connection', (socket) => {
             gameState.teams[team].players = gameState.teams[team].players.filter(id => id !== socket.id);
         });
         io.emit('gameState', gameState);
+    });
+
+    socket.on('getMatchDetails', (matchId) => {
+        const fullMatch = matchHistory.find(m => m.id === matchId);
+        if (fullMatch) {
+            socket.emit('matchDetails', fullMatch);
+        }
     });
 });
 
