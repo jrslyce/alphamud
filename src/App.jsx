@@ -122,15 +122,27 @@ export default function App() {
               <Users size={20} className="text-slate-500" />
             </h2>
             <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => joinTeam('alpha')} className="p-4 rounded-xl border border-slate-700 bg-slate-950 hover:border-cyan-500 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] transition-all font-bold group text-left">
+              <button onClick={() => joinTeam('alpha')} className="p-4 rounded-xl border border-slate-700 bg-slate-950 hover:border-cyan-500 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] transition-all font-bold group text-left relative overflow-hidden">
                 <span className="block text-slate-500 text-[10px] uppercase tracking-widest mb-1">Join Sector</span>
                 <span className="text-white group-hover:text-cyan-400 block text-lg">TEAM ALPHA</span>
+                {gameState?.teams?.alpha?.ready && (
+                  <div className="absolute top-2 right-2 flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2">
+                    <span className="text-[8px] text-cyan-500 font-black tracking-tighter">DESIGN LOCKED</span>
+                    <span className="h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_8px_cyan] animate-pulse"></span>
+                  </div>
+                )}
                 <span className="text-slate-400 text-xs mt-2 block hidden">{gameState?.teams?.alpha?.players?.length || 0} Architects Online</span>
               </button>
 
-              <button onClick={() => joinTeam('omega')} className="p-4 rounded-xl border border-slate-700 bg-slate-950 hover:border-orange-500 hover:shadow-[0_0_15px_rgba(249,115,22,0.2)] transition-all font-bold group text-left">
+              <button onClick={() => joinTeam('omega')} className="p-4 rounded-xl border border-slate-700 bg-slate-950 hover:border-orange-500 hover:shadow-[0_0_15px_rgba(249,115,22,0.2)] transition-all font-bold group text-left relative overflow-hidden">
                 <span className="block text-slate-500 text-[10px] uppercase tracking-widest mb-1">Join Sector</span>
                 <span className="text-white group-hover:text-orange-400 block text-lg">TEAM OMEGA</span>
+                {gameState?.teams?.omega?.ready && (
+                  <div className="absolute top-2 right-2 flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2">
+                    <span className="text-[8px] text-orange-500 font-black tracking-tighter">DESIGN LOCKED</span>
+                    <span className="h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_8px_orange] animate-pulse"></span>
+                  </div>
+                )}
                 <span className="text-slate-400 text-xs mt-2 block hidden">{gameState?.teams?.omega?.players?.length || 0} Architects Online</span>
               </button>
             </div>

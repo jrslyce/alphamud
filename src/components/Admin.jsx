@@ -112,13 +112,23 @@ export function Admin({ gameState, socket, combatResult }) {
                             <option value="alpha" className="bg-slate-900 text-cyan-400">Team Alpha</option>
                             <option value="omega" className="bg-slate-900 text-orange-400">Team Omega</option>
                         </select>
+                        <div className="flex items-center gap-3 border-l border-slate-800 ml-2 pl-4">
+                            <div className="flex items-center gap-1.5">
+                                <div className={`h-2 w-2 rounded-full ${gameState?.teams?.alpha?.ready ? 'bg-cyan-500 shadow-[0_0_8px_cyan]' : 'bg-slate-700'}`}></div>
+                                <span className="text-[10px] text-slate-500 font-bold uppercase">A</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className={`h-2 w-2 rounded-full ${gameState?.teams?.omega?.ready ? 'bg-orange-500 shadow-[0_0_8px_orange]' : 'bg-slate-700'}`}></div>
+                                <span className="text-[10px] text-slate-500 font-bold uppercase">Ω</span>
+                            </div>
+                        </div>
                     </div>
 
                     <button
                         onClick={handleAutoFill}
                         className={`group flex items-center gap-2 px-6 py-3 border rounded-xl font-bold transition-all shadow-lg ${autoFillDone
-                                ? 'bg-emerald-900/30 border-emerald-500 text-emerald-400 shadow-emerald-500/10'
-                                : 'bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-cyan-500 text-white hover:shadow-cyan-500/10'
+                            ? 'bg-emerald-900/30 border-emerald-500 text-emerald-400 shadow-emerald-500/10'
+                            : 'bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-cyan-500 text-white hover:shadow-cyan-500/10'
                             }`}
                     >
                         {autoFillDone ? (
@@ -137,8 +147,8 @@ export function Admin({ gameState, socket, combatResult }) {
                         onClick={handleStartSimulation}
                         disabled={!isFinished && combatResult}
                         className={`group flex items-center gap-2 px-8 py-3 rounded-xl font-black italic tracking-widest transition-all ${!isFinished && combatResult
-                                ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                                : 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:scale-105 active:scale-95'
+                            ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                            : 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:scale-105 active:scale-95'
                             }`}
                     >
                         {(!isFinished && combatResult) ? (

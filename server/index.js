@@ -75,17 +75,19 @@ io.on('connection', (socket) => {
             const randomItem = (arr) => arr[Math.floor(Math.random() * arr.length)].id;
 
             ['alpha', 'omega'].forEach(team => {
-                gameState.teams[team].build = {
-                    thruster: randomItem(MANIFEST.thrusters),
-                    battery: randomItem(MANIFEST.batteries),
-                    fcs: randomItem(MANIFEST.fcs),
-                    core: randomItem(MANIFEST.cores),
-                    armor: randomItem(MANIFEST.armor)
-                };
+                if (!gameState.teams[team].ready) {
+                    gameState.teams[team].build = {
+                        thruster: randomItem(MANIFEST.thrusters),
+                        battery: randomItem(MANIFEST.batteries),
+                        fcs: randomItem(MANIFEST.fcs),
+                        core: randomItem(MANIFEST.cores),
+                        armor: randomItem(MANIFEST.armor)
+                    };
 
-                // 5 random moves
-                gameState.teams[team].sequence = Array.from({ length: 5 }, () => randomItem(CHIPS));
-                gameState.teams[team].ready = true;
+                    // 5 random moves
+                    gameState.teams[team].sequence = Array.from({ length: 5 }, () => randomItem(CHIPS));
+                    gameState.teams[team].ready = true;
+                }
             });
 
             // Randomize home team on autofill
