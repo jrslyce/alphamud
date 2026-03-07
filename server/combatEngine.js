@@ -26,31 +26,52 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq) {
     const alpha = resolveStats(alphaBuild);
     const omega = resolveStats(omegaBuild);
 
-    log.push({ type: 'sys', msg: '--- INITIATING COMBAT SIMULATION ---' });
-    log.push({ type: 'sys', msg: `Alpha SI: ${alpha.si} | Omega SI: ${omega.si}` });
+    const addLog = (type, msg) => {
+        log.push({
+            type,
+            msg,
+            state: {
+                alpha: {
+                    hp: alpha.currentSI, maxHp: alpha.si,
+                    en: alpha.currentEN, maxEn: alpha.enCapacity,
+                    heat: alpha.currentHeat, compute: alpha.compute,
+                    stability: alpha.stability, speed: alpha.speed
+                },
+                omega: {
+                    hp: omega.currentSI, maxHp: omega.si,
+                    en: omega.currentEN, maxEn: omega.enCapacity,
+                    heat: omega.currentHeat, compute: omega.compute,
+                    stability: omega.stability, speed: omega.speed
+                }
+            }
+        });
+    };
+
+    addLog('sys', '--- INITIATING COMBAT SIMULATION ---');
+    addLog('sys', `Alpha SI: ${alpha.si} | Omega SI: ${omega.si}`);
 
     // Phase 1: Initiative
     // Lower lock-on time means faster first strike.
     let alphaGoesFirst = alpha.lockOn <= omega.lockOn;
-    log.push({ type: 'initiative', msg: `Alpha Lock-on: ${alpha.lockOn}s | Omega Lock-on: ${omega.lockOn}s` });
-    log.push({ type: 'initiative', msg: `${alphaGoesFirst ? 'Alpha' : 'Omega'} seizes initiative!` });
+    addLog('initiative', `Alpha Lock-on: ${alpha.lockOn}s | Omega Lock-on: ${omega.lockOn}s`);
+    addLog('initiative', `${alphaGoesFirst ? 'Alpha' : 'Omega'} seizes initiative!`);
 
     let winner = null;
 
     for (let turn = 0; turn < 5; turn++) {
-        log.push({ type: 'turn', msg: `--- ROUND ${turn + 1} START ---` });
+        addLog('turn', `--- ROUND ${turn + 1} START ---`);
 
         const resolveStrike = (attacker, defender, side, targetSide, moveId) => {
             if (winner) return;
             if (attacker.stunTurns > 0) {
-                log.push({ type: 'hit', msg: `[${side}] is Stunned! Sequence broken for this turn.` });
+                addLog('hit', `[${side}] is Stunned! Sequence broken for this turn.`);
                 attacker.stunTurns--;
                 return;
             }
 
             const move = CHIPS.find(c => c.id === moveId);
             if (!move) {
-                log.push({ type: 'hit', msg: `[${side}] idles.` });
+                addLog('hit', `[${side}] idles.`);
                 return;
             }
 
@@ -59,12 +80,12 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq) {
             attacker.currentHeat += move.heat;
 
             if (attacker.currentEN < 0) {
-                log.push({ type: 'critical', msg: `[${side}] Energy depletion botch! Shutting down.` });
+                addLog('critical', `[${side}] Energy depletion botch! Shutting down.`);
                 winner = targetSide;
                 return;
             }
             if (attacker.currentHeat > attacker.heatLimit) {
-                log.push({ type: 'critical', msg: `[${side}] Thermal Meltdown! Structure buckling.` });
+                addLog('critical', `[${side}] Thermal Meltdown! Structure buckling.`);
                 winner = targetSide;
                 return;
             }
@@ -79,7 +100,7 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq) {
             const pseudoRng = ((attacker.si + defender.si + turn) % 100) / 100;
 
             if (pseudoRng > hitChance) {
-                log.push({ type: 'miss', msg: `[${side}]'s ${move.name} misses the evasive ${targetSide}!` });
+                addLog('miss', `[${side}]'s ${move.name} misses the evasive ${targetSide}!`);
                 return;
             }
 
@@ -88,12 +109,12 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq) {
             const actualDmg = Math.floor(move.damage - (move.damage * dmgReduction));
 
             defender.currentSI -= actualDmg;
-            log.push({ type: 'hit', msg: `[${side}] strikes with ${move.name}! Deals ${actualDmg} integrity damage.` });
+            addLog('hit', `[${side}] strikes with ${move.name}! Deals ${actualDmg} integrity damage.`);
 
             // Sell Mechanics
             const stunThreshold = defender.stability * 0.25;
             if (actualDmg > stunThreshold) {
-                log.push({ type: 'critical', msg: `MASSIVE HIT! [${targetSide}]'s stability broken. System Stunned!` });
+                addLog('critical', `MASSIVE HIT! [${targetSide}]'s stability broken. System Stunned!`);
                 defender.stunTurns = 1;
             }
 
@@ -124,8 +145,8 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq) {
         else winner = 'Draw';
     }
 
-    log.push({ type: 'sys', msg: `=== SIMULATION COMPLETE ===` });
-    log.push({ type: 'sys', msg: `VICTOR: ${winner.toUpperCase()}` });
+    addLog('sys', `=== SIMULATION COMPLETE ===`);
+    addLog('sys', `VICTOR: ${winner.toUpperCase()}`);
 
     return { log, winner, alphaFinalSI: alpha.currentSI, omegaFinalSI: omega.currentSI };
 }
