@@ -26,10 +26,11 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq, homeTe
     const alpha = resolveStats(alphaBuild);
     const omega = resolveStats(omegaBuild);
 
-    const addLog = (type, msg) => {
+    const addLog = (type, msg, actionData = null) => {
         log.push({
             type,
             msg,
+            actionData,
             state: {
                 alpha: {
                     hp: alpha.currentSI, maxHp: alpha.si,
@@ -65,30 +66,42 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq, homeTe
         addLog('turn', `--- ROUND ${turn + 1} START ---`);
 
         const resolveStrike = (attacker, defender, side, targetSide, moveId) => {
+            const actionRecord = {
+                round: turn + 1,
+                attacker: side,
+                defender: targetSide,
+                move: null,
+                result: 'none',
+                actualDmg: 0
+            };
+
             if (winner) return;
+
             if (attacker.stunTurns > 0) {
-                addLog('hit', `[${side}] is Stunned! Sequence broken for this turn.`);
+                addLog('hit', `[${side}] is Stunned! Sequence broken.`, { ...actionRecord, result: 'stunned' });
                 attacker.stunTurns--;
                 return;
             }
 
             const move = CHIPS.find(c => c.id === moveId);
             if (!move) {
-                addLog('hit', `[${side}] idles.`);
+                addLog('hit', `[${side}] idles.`, { ...actionRecord, result: 'idle' });
                 return;
             }
+
+            actionRecord.move = { ...move };
 
             // Phase 2: Engagement (EN/Heat)
             attacker.currentEN -= move.en;
             attacker.currentHeat += move.heat;
 
             if (attacker.currentEN < 0) {
-                addLog('critical', `[${side}] Energy depletion botch! Shutting down.`);
+                addLog('critical', `[${side}] Energy depletion botch! Shutting down. (EN: -${move.en}, Heat: +${move.heat})`, { ...actionRecord, result: 'botch' });
                 winner = targetSide;
                 return;
             }
             if (attacker.currentHeat > attacker.heatLimit) {
-                addLog('critical', `[${side}] Thermal Meltdown! Structure buckling.`);
+                addLog('critical', `[${side}] Thermal Meltdown! Structure buckling. (EN: -${move.en}, Heat: +${move.heat})`, { ...actionRecord, result: 'meltdown' });
                 winner = targetSide;
                 return;
             }
@@ -103,7 +116,7 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq, homeTe
             const pseudoRng = ((attacker.si + defender.si + turn) % 100) / 100;
 
             if (pseudoRng > hitChance) {
-                addLog('miss', `[${side}]'s ${move.name} misses the evasive ${targetSide}!`);
+                addLog('miss', `[${side}]'s ${move.name} misses the evasive ${targetSide}! (EN: -${move.en}, Heat: +${move.heat})`, { ...actionRecord, result: 'miss' });
                 return;
             }
 
@@ -112,13 +125,21 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq, homeTe
             const actualDmg = Math.floor(move.damage - (move.damage * dmgReduction));
 
             defender.currentSI -= actualDmg;
-            addLog('hit', `[${side}] strikes with ${move.name}! Deals ${actualDmg} integrity damage.`);
+            actionRecord.actualDmg = actualDmg;
 
             // Sell Mechanics
             const stunThreshold = defender.stability * 0.25;
+            let isStunned = false;
+
             if (actualDmg > stunThreshold) {
-                addLog('critical', `MASSIVE HIT! [${targetSide}]'s stability broken. System Stunned!`);
+                isStunned = true;
                 defender.stunTurns = 1;
+            }
+
+            addLog('hit', `[${side}] strikes with ${move.name}! Deals ${actualDmg} integrity damage. (EN: -${move.en}, Heat: +${move.heat})`, { ...actionRecord, result: isStunned ? 'stun' : 'hit' });
+
+            if (isStunned) {
+                addLog('critical', `MASSIVE HIT! [${targetSide}]'s stability broken. System Stunned!`);
             }
 
             if (defender.currentSI <= 0) {

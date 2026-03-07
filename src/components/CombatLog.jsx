@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Terminal } from 'lucide-react';
+import { Terminal, Zap, Flame, Target, Sword } from 'lucide-react';
 import { LiveStats } from './LiveStats';
 
 export function CombatLog({ logs, winner, instant = false }) {
@@ -60,11 +60,76 @@ export function CombatLog({ logs, winner, instant = false }) {
         }
     };
 
+    const actions = displayedLogs.filter(l => l.actionData).map(l => l.actionData);
+    const rounds = {};
+    actions.forEach(a => {
+        if (!rounds[a.round]) rounds[a.round] = { round: a.round, alpha: null, omega: null };
+        if (a.attacker === 'Alpha') rounds[a.round].alpha = a;
+        else rounds[a.round].omega = a;
+    });
+    const roundList = Object.values(rounds).sort((a, b) => a.round - b.round);
+
+    const renderActionCard = (action, team) => {
+        if (!action) return null;
+
+        const isHit = action.result === 'hit' || action.result === 'stun';
+        const bgColor = team === 'alpha' ? 'bg-cyan-950/40 border-cyan-500/30 text-cyan-50' : 'bg-orange-950/40 border-orange-500/30 text-orange-50';
+        const resultColor = isHit ? 'text-green-400' : 'text-slate-500';
+
+        return (
+            <div className={`p-3 rounded-lg border ${bgColor} group relative transition-all hover:scale-105`}>
+                <div className="text-[10px] font-bold uppercase tracking-widest opacity-50 mb-1">{team}</div>
+                <div className="font-bold text-xs truncate mb-2">{action.move?.name || 'IDLE'}</div>
+
+                <div className={`text-[10px] font-black uppercase tracking-widest ${resultColor}`}>
+                    {action.result === 'stunned' ? 'STUNNED' :
+                        (action.result === 'hit' || action.result === 'stun') ? `${action.actualDmg} DMG` :
+                            action.result === 'miss' ? 'MISSED' :
+                                action.result === 'botch' ? 'BOTCHED' :
+                                    action.result === 'meltdown' ? 'MELTDOWN' : 'IDLE'}
+                </div>
+
+                {action.move && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-4 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
+                        <div className="text-xs font-black uppercase text-white mb-3 pb-2 border-b border-slate-700 flex justify-between">
+                            <span>{action.move.name}</span>
+                            <span className={isHit ? 'text-green-400' : 'text-slate-500'}>{action.result.toUpperCase()}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+                            <div className="flex items-center gap-2 text-yellow-400"><Zap size={12} /> -{action.move.en}</div>
+                            <div className="flex items-center gap-2 text-red-400"><Flame size={12} /> +{action.move.heat}</div>
+                            <div className="flex items-center gap-2 text-slate-300"><Target size={12} /> {Math.floor(action.move.success * 100)}%</div>
+                            <div className="flex items-center gap-2 text-green-400"><Sword size={12} /> {action.move.damage}</div>
+                        </div>
+                        {isHit && (
+                            <div className="mt-3 pt-3 border-t border-slate-700 text-[10px] text-slate-400 leading-tight">
+                                <span className="text-white block mb-1">Impact Analysis:</span>
+                                Target mitigation reduced max damage ({action.move.damage}) down to <span className="text-red-400 font-bold">{action.actualDmg} actual damage</span>.
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div className="w-full mx-auto space-y-8 animate-in fade-in duration-700">
             {currentState && (
                 <div className="mb-6">
                     <LiveStats state={currentState} winner={winner} isFinished={isFinished} />
+                </div>
+            )}
+
+            {roundList.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6 bg-slate-900/40 p-6 rounded-2xl border border-slate-800">
+                    {roundList.map(r => (
+                        <div key={r.round} className="space-y-3 animate-in fade-in zoom-in duration-300">
+                            <div className="text-center text-[10px] font-bold text-slate-500 tracking-widest uppercase">Round {r.round}</div>
+                            {renderActionCard(r.alpha, 'alpha')}
+                            {renderActionCard(r.omega, 'omega')}
+                        </div>
+                    ))}
                 </div>
             )}
 
