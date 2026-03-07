@@ -1,5 +1,27 @@
 import React from 'react';
-import { Shield, Zap, Flame, Activity, Crosshair, Wind, Bot } from 'lucide-react';
+import { Shield, Zap, Flame, Activity, Crosshair, Wind, Bot, Trophy } from 'lucide-react';
+
+const Confetti = () => {
+    return (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+            {[...Array(30)].map((_, i) => {
+                const colors = ['bg-red-500', 'bg-yellow-400', 'bg-blue-500', 'bg-green-400', 'bg-purple-500', 'bg-orange-500', 'bg-cyan-400'];
+                return (
+                    <div
+                        key={i}
+                        className={`absolute w-2 h-2 rounded-sm animate-confetti shadow-sm ${colors[i % colors.length]}`}
+                        style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `-10px`,
+                            animationDelay: `${Math.random() * 4}s`,
+                            animationDuration: `${2 + Math.random() * 3}s`,
+                        }}
+                    />
+                );
+            })}
+        </div>
+    );
+};
 
 const StatBar = ({ label, current = 0, max = 100, color, icon: Icon, inverse = false }) => {
     // For heat, higher is worse, but we still fill the bar.
@@ -21,22 +43,35 @@ const StatBar = ({ label, current = 0, max = 100, color, icon: Icon, inverse = f
     );
 };
 
-export function LiveStats({ state }) {
+export function LiveStats({ state, winner, isFinished }) {
     if (!state) return null;
 
     const renderMech = (team, data) => {
         const isAlpha = team === 'alpha';
-        const color = isAlpha ? 'cyan' : 'orange';
+        const isWinner = isFinished && winner && winner.toLowerCase() === team;
+
+        // Use explicit tailwind classes to prevent purging
+        const borderColor = isAlpha ? 'border-cyan-500/20' : 'border-orange-500/20';
+        const textColor = isAlpha ? 'text-cyan-400' : 'text-orange-400';
+        const iconColor = isAlpha ? 'text-cyan-500' : 'text-orange-500';
+        const hpColor = data.hp < data.maxHp * 0.25 ? 'bg-red-500' : (isAlpha ? 'bg-cyan-500' : 'bg-orange-500');
 
         return (
-            <div className={`p-4 md:p-6 bg-slate-900 border border-${color}-500/20 rounded-2xl relative overflow-hidden`}>
-                <div className={`absolute -right-10 -top-10 opacity-5`}>
-                    <Bot size={150} className={`text-${color}-500`} />
+            <div className={`p-4 md:p-6 bg-slate-900 border ${borderColor} rounded-2xl relative overflow-hidden transition-all duration-500 ${isWinner ? 'shadow-[0_0_30px_rgba(250,204,21,0.2)] border-yellow-500/50' : ''}`}>
+
+                {isWinner && <Confetti />}
+
+                <div className="absolute -right-10 -top-10 opacity-5">
+                    <Bot size={150} className={iconColor} />
                 </div>
 
-                <h3 className={`text-xl font-black uppercase tracking-widest text-${color}-400 mb-4 flex items-center justify-between`}>
-                    Team {team}
-                    <Activity size={18} className="animate-pulse" />
+                <h3 className={`text-xl font-black uppercase tracking-widest ${textColor} mb-4 flex items-center relative z-10`}>
+                    <div className="flex items-center gap-2">
+                        {isWinner && <Trophy size={20} className="text-yellow-400 animate-bounce" />}
+                        Team {team}
+                        {isWinner && <span className="text-yellow-400 ml-2 text-xs">VICTORIOUS</span>}
+                    </div>
+                    {!isFinished && <div className="ml-auto"><Activity size={18} className="animate-pulse" /></div>}
                 </h3>
 
                 <div className="space-y-4 relative z-10">
@@ -44,7 +79,7 @@ export function LiveStats({ state }) {
                         label="Structural Int."
                         current={data.hp}
                         max={data.maxHp}
-                        color={data.hp < data.maxHp * 0.25 ? 'bg-red-500' : `bg-${color}-500`}
+                        color={hpColor}
                         icon={Shield}
                     />
                     <StatBar

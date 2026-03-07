@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Terminal, Copy, Shield, Zap, Target, Gauge, Cpu, Play, Sword, UserPlus, ZapOff } from 'lucide-react';
+import { CombatLog } from './CombatLog';
 
 export function Admin({ gameState, socket, combatResult }) {
     const [startTime, setStartTime] = useState(null);
@@ -109,72 +110,22 @@ export function Admin({ gameState, socket, combatResult }) {
 
             <div id="telemetry" data-elapsed={elapsed} data-count={displayCount} data-start={startTime} data-now={now} className="hidden"></div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="space-y-6">
-                    <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm">
-                        <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
-                            <Terminal size={20} className="text-red-500" />
-                            Combat Telemetry
-                        </h2>
-                        <div ref={consoleContainerRef} className="bg-black/80 border border-slate-800 rounded-xl p-4 h-[400px] overflow-y-auto font-mono text-sm space-y-2 shadow-inner custom-scrollbar relative">
-                            {displayedLogs.length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-700 space-y-4">
-                                    <div className="w-12 h-12 border-2 border-slate-800 border-t-red-500 rounded-full animate-spin" />
-                                    <p className="text-xs uppercase tracking-widest font-black">Waiting for Data Packets...</p>
-                                </div>
-                            ) : (
-                                displayedLogs.map((log, idx) => (
-                                    <div key={idx} className={`leading-relaxed animate-in slide-in-from-left-2 duration-300 ${getLogColor(log.type)}`}>
-                                        <span className="opacity-30 mr-3 text-[10px] select-none">{String(idx).padStart(3, '0')}</span>
-                                        {log.msg}
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                        {isFinished && combatResult?.winner && (
-                            <div className="mt-4 p-4 bg-red-500 border border-red-400 text-white rounded-xl animate-in zoom-in duration-500">
-                                <h3 className="text-2xl font-black uppercase text-center tracking-widest italic">
-                                    {combatResult.winner === 'Draw' ? 'SIMULATION DRAW' : `VICTOR: ${combatResult.winner}`}
-                                </h3>
-                            </div>
-                        )}
-                    </div>
+            {combatResult ? (
+                <div className="mt-8">
+                    <CombatLog logs={combatResult.log} winner={combatResult.winner} />
                 </div>
-
-                <div className="grid grid-cols-1 gap-6">
-                    <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
-                        <div className="flex items-center justify-between mb-8">
-                            <h2 className="text-xl font-black text-white uppercase tracking-wide">Fleet Status</h2>
-                            <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-full text-[10px] font-black tracking-widest animate-pulse uppercase">Tactical Map Active</span>
-                        </div>
-
-                        <div className="space-y-8">
-                            {['alpha', 'omega'].map(team => (
-                                <div key={team} className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className={`text-lg font-black uppercase tracking-widest ${team === 'alpha' ? 'text-cyan-400' : 'text-orange-400'}`}>
-                                            Team {team}
-                                        </h3>
-                                        <div className="flex gap-2">
-                                            {gameState?.teams[team]?.ready && (
-                                                <span className="px-2 py-0.5 bg-emerald-500 text-black text-[10px] font-black rounded uppercase">Ready</span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-5 gap-3">
-                                        {gameState?.teams[team]?.sequence?.map((move, idx) => (
-                                            <div key={idx} className="aspect-square bg-black/40 border border-slate-800 rounded-lg flex items-center justify-center text-[10px] font-mono text-slate-500">
-                                                {move ? <div className="text-emerald-400 text-[8px] text-center font-bold px-1">{move.replace('_', ' ')}</div> : idx + 1}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
+            ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                    {/* Placeholder when no combat is running to keep layout consistent if needed */}
+                    <div className="col-span-full">
+                        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 text-center text-slate-500 py-20 flex flex-col items-center">
+                            <Terminal size={48} className="text-slate-700 mb-4" />
+                            <h2 className="text-xl font-black uppercase tracking-widest text-slate-400 mb-2">Simulated Combat Telemetry Offline</h2>
+                            <p className="max-w-md text-sm">Waiting for Overseer to initiate a new combat sequence. Generate loadouts using auto-fill or wait for user inputs.</p>
                         </div>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

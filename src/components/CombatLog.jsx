@@ -64,7 +64,7 @@ export function CombatLog({ logs, winner, instant = false }) {
         <div className="w-full mx-auto space-y-8 animate-in fade-in duration-700">
             {currentState && (
                 <div className="mb-6">
-                    <LiveStats state={currentState} />
+                    <LiveStats state={currentState} winner={winner} isFinished={isFinished} />
                 </div>
             )}
 
