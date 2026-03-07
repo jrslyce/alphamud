@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
-import { Cpu, Terminal, Users, Play } from 'lucide-react';
+import { Cpu, Terminal, Users, Play, Settings } from 'lucide-react';
 import { Builder } from './components/Builder';
 import { CombatLog } from './components/CombatLog';
 import { Admin } from './components/Admin';
@@ -88,6 +88,15 @@ export default function App() {
     <div className={`min-h-screen transition-colors duration-1000 ${getThemeClasses()} p-4 md:p-8 flex flex-col items-center justify-center space-y-8`}>
       {getGlowOverlay()}
       <div className="relative z-10 w-full flex flex-col items-center space-y-8 w-full">
+        {!isAdminRoute && (
+          <button
+            onClick={() => window.location.href = '/admin'}
+            className="absolute top-4 right-4 flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-700 hover:border-cyan-500 text-slate-400 hover:text-cyan-400 rounded-lg text-xs font-bold uppercase tracking-widest transition-all shadow-lg hover:shadow-cyan-500/20"
+          >
+            <Settings size={14} />
+            Admin
+          </button>
+        )}
         <div className="text-center space-y-4">
           <div className="inline-flex items-center justify-center p-4 bg-slate-900 border border-slate-800 rounded-full shadow-[0_0_30px_rgba(6,182,212,0.1)]">
             <Cpu className="text-cyan-500" size={48} />

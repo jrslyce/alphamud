@@ -21,7 +21,7 @@ function resolveStats(build) {
     return { ...stats, passiveHeat, currentSI: stats.si, currentEN: stats.enCapacity, currentHeat: 0, stunTurns: 0 };
 }
 
-export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq) {
+export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq, homeTeam) {
     const log = [];
     const alpha = resolveStats(alphaBuild);
     const omega = resolveStats(omegaBuild);
@@ -47,7 +47,10 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq) {
         });
     };
 
-    addLog('sys', '--- INITIATING COMBAT SIMULATION ---');
+    addLog('sys', `--- INITIATING COMBAT SIMULATION ---`);
+    if (homeTeam && homeTeam !== 'neutral') {
+        addLog('sys', `Welcome to the ${homeTeam.toUpperCase()} stadium`);
+    }
     addLog('sys', `Alpha SI: ${alpha.si} | Omega SI: ${omega.si}`);
 
     // Phase 1: Initiative

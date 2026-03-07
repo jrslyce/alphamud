@@ -124,7 +124,8 @@ io.on('connection', (socket) => {
                 try {
                     const result = runSimulation(
                         gameState.teams.alpha.build, gameState.teams.alpha.sequence,
-                        gameState.teams.omega.build, gameState.teams.omega.sequence
+                        gameState.teams.omega.build, gameState.teams.omega.sequence,
+                        gameState.homeTeam
                     );
 
                     const r = Math.floor(Math.random() * 900) + 100;

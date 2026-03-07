@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Terminal, Copy, Shield, Zap, Target, Gauge, Cpu, Play, Sword, UserPlus, ZapOff } from 'lucide-react';
+import { Terminal, Copy, Shield, Zap, Target, Gauge, Cpu, Play, Sword, UserPlus, ZapOff, CheckCircle } from 'lucide-react';
 import { CombatLog } from './CombatLog';
 
 export function Admin({ gameState, socket, combatResult }) {
     const [startTime, setStartTime] = useState(null);
+    const [autoFillDone, setAutoFillDone] = useState(false);
     const [now, setNow] = useState(Date.now());
     const lastResultKeyRef = useRef(null);
     const consoleContainerRef = useRef(null);
@@ -71,6 +72,8 @@ export function Admin({ gameState, socket, combatResult }) {
 
     const handleAutoFill = () => {
         socket.emit('adminAutoFill');
+        setAutoFillDone(true);
+        setTimeout(() => setAutoFillDone(false), 2000);
     };
 
     const handleSetHomeTeam = (e) => {
@@ -111,17 +114,38 @@ export function Admin({ gameState, socket, combatResult }) {
                         </select>
                     </div>
 
-                    <button onClick={handleAutoFill} className="group flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-500 text-white rounded-xl font-bold transition-all shadow-lg hover:shadow-cyan-500/10">
-                        <UserPlus size={18} className="text-cyan-500 group-hover:scale-110 transition-transform" />
-                        Auto-Fill Units
+                    <button
+                        onClick={handleAutoFill}
+                        className={`group flex items-center gap-2 px-6 py-3 border rounded-xl font-bold transition-all shadow-lg ${autoFillDone
+                                ? 'bg-emerald-900/30 border-emerald-500 text-emerald-400 shadow-emerald-500/10'
+                                : 'bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-cyan-500 text-white hover:shadow-cyan-500/10'
+                            }`}
+                    >
+                        {autoFillDone ? (
+                            <CheckCircle size={18} className="animate-in zoom-in" />
+                        ) : (
+                            <UserPlus size={18} className="text-cyan-500 group-hover:scale-110 transition-transform" />
+                        )}
+                        {autoFillDone ? 'UNITS READY' : 'Auto-Fill Units'}
                     </button>
                     <button onClick={handleReset} className="flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-red-900/20 border border-slate-700 hover:border-red-500 text-white rounded-xl font-bold transition-all">
                         <ZapOff size={18} className="text-red-500" />
                         RESET
                     </button>
-                    <button id="launch-button" onClick={handleStartSimulation} className="group flex items-center gap-2 px-8 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-black italic tracking-widest transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:scale-105 active:scale-95">
-                        <Play size={20} fill="currentColor" />
-                        LAUNCH
+                    <button
+                        id="launch-button"
+                        onClick={handleStartSimulation}
+                        disabled={!isFinished && combatResult}
+                        className={`group flex items-center gap-2 px-8 py-3 rounded-xl font-black italic tracking-widest transition-all ${!isFinished && combatResult
+                                ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                                : 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:scale-105 active:scale-95'
+                            }`}
+                    >
+                        {(!isFinished && combatResult) ? (
+                            <><Gauge size={20} className="animate-spin text-slate-500" /> PROCESSING</>
+                        ) : (
+                            <><Play size={20} fill="currentColor" /> LAUNCH</>
+                        )}
                     </button>
                 </div>
             </div>
