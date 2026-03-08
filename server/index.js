@@ -189,15 +189,22 @@ io.on('connection', (socket) => {
         }, 15000);
     };
 
-    socket.on('pilotPitStopChoice', ({ team, choice }) => {
+    socket.on('pilotPitStopChoice', ({ team, choice, isAdmin }) => {
         if (gameState.pitStop.active && (team === 'alpha' || team === 'omega')) {
             gameState.pitStop[`${team}Choice`] = choice;
-            console.log(`[SYS] Pit Stop selection from ${team}: ${choice}`);
+            console.log(`[SYS] Pit Stop selection from ${team}: ${choice} (Admin: ${!!isAdmin})`);
             io.emit('gameState', gameState);
 
-            // If both human choices are in (or if it's the only human subbed)
-            // For now, let's wait for both or auto-fill after a delay
-            checkPitStopCompletion();
+            if (isAdmin) {
+                // Admin made a choice. Proceed only if BOTH are selected.
+                // We won't auto-pick the remaining empty team instantly.
+                if (gameState.pitStop.alphaChoice && gameState.pitStop.omegaChoice) {
+                    resumeCombat();
+                }
+            } else {
+                // Human player made a choice. Check if we should auto-fill others or proceed.
+                checkPitStopCompletion();
+            }
         }
     });
 

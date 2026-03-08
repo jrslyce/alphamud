@@ -18,6 +18,7 @@ export default function App() {
   const [matchHistory, setMatchHistory] = useState([]);
   const [myTeam, setMyTeam] = useState(null);
   const [combatResult, setCombatResult] = useState(null);
+  const [combatLogFinished, setCombatLogFinished] = useState(false);
   const [isAdminRoute, setIsAdminRoute] = useState(false);
 
   useEffect(() => {
@@ -171,9 +172,10 @@ export default function App() {
                 <CombatLog
                   logs={combatResult.log}
                   winner={combatResult.winner}
+                  onFinished={setCombatLogFinished}
                 />
 
-                {gameState?.pitStop?.active && (
+                {gameState?.pitStop?.active && combatLogFinished && (
                   <PitStopOverlay
                     team={myTeam}
                     onSelect={(choice) => socket.emit('pilotPitStopChoice', { team: myTeam, choice })}

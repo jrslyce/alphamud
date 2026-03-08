@@ -65,91 +65,102 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq, homeTe
     let winner = null;
     // turn is handled above
 
+    const resolveStrike = (attacker, defender, side, targetSide, moveId) => {
+        const actionRecord = {
+            round: turn + 1,
+            attacker: side,
+            defender: targetSide,
+            move: null,
+            result: 'none',
+            actualDmg: 0
+        };
+
+        if (winner) return;
+
+        if (attacker.stunTurns > 0) {
+            addLog('hit', `[${side}] is Stunned! Sequence broken.`, { ...actionRecord, result: 'stunned' });
+            attacker.stunTurns--;
+            return;
+        }
+
+        const move = CHIPS.find(c => c.id === moveId);
+        if (!move) {
+            addLog('hit', `[${side}] idles.`, { ...actionRecord, result: 'idle' });
+            return;
+        }
+
+        actionRecord.move = { ...move };
+
+        // Phase 2: Engagement (EN/Heat)
+        attacker.currentEN -= move.en;
+        attacker.currentHeat += move.heat;
+
+        if (attacker.currentEN < 0) {
+            addLog('critical', `[${side}] Energy depletion botch! Shutting down. (EN: -${move.en}, Heat: +${move.heat})`, { ...actionRecord, result: 'botch' });
+            winner = targetSide;
+            return;
+        }
+        if (attacker.currentHeat > attacker.heatLimit) {
+            addLog('critical', `[${side}] Thermal Meltdown! Structure buckling. (EN: -${move.en}, Heat: +${move.heat})`, { ...actionRecord, result: 'meltdown' });
+            winner = targetSide;
+            return;
+        }
+
+        // Deterministic Success "Roll" - for this AAA determinism, if Success + Compute vs Evasion is met.
+        // Evasion simplistic logic: lighter mechs evade better.
+        const evasionModifier = Math.max(0, 10000 - defender.weight) / 10000; // 0 to 1
+        const hitChance = move.success + (attacker.compute / 1000) - (evasionModifier * 0.2);
+
+        // Let's use a seeded RNG based on turn number & stability for AAA determinism, or just pure math threshold.
+        // Since it's deterministic MUD, let's use a modulus of the SI sums.
+        const pseudoRng = ((attacker.si + defender.si + turn) % 100) / 100;
+
+        if (pseudoRng > hitChance) {
+            addLog('miss', `[${side}]'s ${move.name} misses the evasive ${targetSide}! (EN: -${move.en}, Heat: +${move.heat})`, { ...actionRecord, result: 'miss' });
+            return;
+        }
+
+        // Phase 3: Physics (Damage Mitigation & Sell)
+        const dmgReduction = Math.min(defender.stability / defender.weight, 0.8); // Max 80% reduction
+        const actualDmg = Math.floor(move.damage - (move.damage * dmgReduction));
+
+        defender.currentSI -= actualDmg;
+        actionRecord.actualDmg = actualDmg;
+
+        // Sell Mechanics
+        const stunThreshold = defender.stability * 0.25;
+        let isStunned = false;
+
+        if (actualDmg > stunThreshold) {
+            isStunned = true;
+            defender.stunTurns = 1;
+        }
+
+        addLog('hit', `[${side}] strikes with ${move.name}! Deals ${actualDmg} integrity damage. (EN: -${move.en}, Heat: +${move.heat})`, { ...actionRecord, result: isStunned ? 'stun' : 'hit' });
+
+        if (isStunned) {
+            addLog('critical', `MASSIVE HIT! [${targetSide}]'s stability broken. System Stunned!`);
+        }
+
+        if (defender.currentSI <= 0) {
+            winner = side;
+        }
+    };
+
     // Phase 1: Initiation
     for (; turn < 3; turn++) {
         addLog('turn', `--- ROUND ${turn + 1} START ---`);
 
-        const resolveStrike = (attacker, defender, side, targetSide, moveId) => {
-            const actionRecord = {
-                round: turn + 1,
-                attacker: side,
-                defender: targetSide,
-                move: null,
-                result: 'none',
-                actualDmg: 0
-            };
+        // Attack Sequence
+        if (alphaGoesFirst) {
+            resolveStrike(alpha, omega, 'Alpha', 'Omega', alphaSeq[turn]);
+            resolveStrike(omega, alpha, 'Omega', 'Alpha', omegaSeq[turn]);
+        } else {
+            resolveStrike(omega, alpha, 'Omega', 'Alpha', omegaSeq[turn]);
+            resolveStrike(alpha, omega, 'Alpha', 'Omega', alphaSeq[turn]);
+        }
 
-            if (winner) return;
-
-            if (attacker.stunTurns > 0) {
-                addLog('hit', `[${side}] is Stunned! Sequence broken.`, { ...actionRecord, result: 'stunned' });
-                attacker.stunTurns--;
-                return;
-            }
-
-            const move = CHIPS.find(c => c.id === moveId);
-            if (!move) {
-                addLog('hit', `[${side}] idles.`, { ...actionRecord, result: 'idle' });
-                return;
-            }
-
-            actionRecord.move = { ...move };
-
-            // Phase 2: Engagement (EN/Heat)
-            attacker.currentEN -= move.en;
-            attacker.currentHeat += move.heat;
-
-            if (attacker.currentEN < 0) {
-                addLog('critical', `[${side}] Energy depletion botch! Shutting down. (EN: -${move.en}, Heat: +${move.heat})`, { ...actionRecord, result: 'botch' });
-                winner = targetSide;
-                return;
-            }
-            if (attacker.currentHeat > attacker.heatLimit) {
-                addLog('critical', `[${side}] Thermal Meltdown! Structure buckling. (EN: -${move.en}, Heat: +${move.heat})`, { ...actionRecord, result: 'meltdown' });
-                winner = targetSide;
-                return;
-            }
-
-            // Deterministic Success "Roll" - for this AAA determinism, if Success + Compute vs Evasion is met.
-            // Evasion simplistic logic: lighter mechs evade better.
-            const evasionModifier = Math.max(0, 10000 - defender.weight) / 10000; // 0 to 1
-            const hitChance = move.success + (attacker.compute / 1000) - (evasionModifier * 0.2);
-
-            // Let's use a seeded RNG based on turn number & stability for AAA determinism, or just pure math threshold.
-            // Since it's deterministic MUD, let's use a modulus of the SI sums.
-            const pseudoRng = ((attacker.si + defender.si + turn) % 100) / 100;
-
-            if (pseudoRng > hitChance) {
-                addLog('miss', `[${side}]'s ${move.name} misses the evasive ${targetSide}! (EN: -${move.en}, Heat: +${move.heat})`, { ...actionRecord, result: 'miss' });
-                return;
-            }
-
-            // Phase 3: Physics (Damage Mitigation & Sell)
-            const dmgReduction = Math.min(defender.stability / defender.weight, 0.8); // Max 80% reduction
-            const actualDmg = Math.floor(move.damage - (move.damage * dmgReduction));
-
-            defender.currentSI -= actualDmg;
-            actionRecord.actualDmg = actualDmg;
-
-            // Sell Mechanics
-            const stunThreshold = defender.stability * 0.25;
-            let isStunned = false;
-
-            if (actualDmg > stunThreshold) {
-                isStunned = true;
-                defender.stunTurns = 1;
-            }
-
-            addLog('hit', `[${side}] strikes with ${move.name}! Deals ${actualDmg} integrity damage. (EN: -${move.en}, Heat: +${move.heat})`, { ...actionRecord, result: isStunned ? 'stun' : 'hit' });
-
-            if (isStunned) {
-                addLog('critical', `MASSIVE HIT! [${targetSide}]'s stability broken. System Stunned!`);
-            }
-
-            if (defender.currentSI <= 0) {
-                winner = side;
-            }
-        };
+        if (winner) break;
 
         // Phase 4: Governor
         alpha.currentHeat += alpha.passiveHeat;
@@ -157,7 +168,7 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq, homeTe
     }
 
     // PIT STOP CHECK
-    if (!winner && turn === 3) {
+    if (!winner && turn === 3 && !resumeState) {
         addLog('pitstop', `INTERMISSION: PIT STOP TRIGGERED. Awaiting pilot optimizations for Phase 2.`);
         return {
             log,
@@ -186,6 +197,17 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq, homeTe
     if (resumeState) {
         applyPitStop(alpha, resumeState.alphaChoice);
         applyPitStop(omega, resumeState.omegaChoice);
+
+        const strategyLabel = (choice) => {
+            if (choice === 'overclock') return 'Overclock Thrusters (+15% Speed / +30% Heat Gen)';
+            if (choice === 'safety') return 'Safety Cooldown (-20% Speed / -50% Heat Gen)';
+            if (choice === 'defense') return 'Defensive Bracing (+20% Stability / -15% Evasion)';
+            return 'Unknown';
+        };
+
+        addLog('pitstop', `[Alpha] Pit Strategy: ${strategyLabel(resumeState.alphaChoice)}`);
+        addLog('pitstop', `[Omega] Pit Strategy: ${strategyLabel(resumeState.omegaChoice)}`);
+        addLog('pitstop', `--- RESUMING COMBAT: PHASE 2 ---`);
     }
 
     // FINAL PHASE (Rounds 4-5) - Only happens if called with pit stop data

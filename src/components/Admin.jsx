@@ -6,6 +6,7 @@ export function Admin({ gameState, socket, combatResult }) {
     const [startTime, setStartTime] = useState(null);
     const [autoFillDone, setAutoFillDone] = useState(false);
     const [now, setNow] = useState(Date.now());
+    const [combatLogFinished, setCombatLogFinished] = useState(false);
     const lastResultKeyRef = useRef(null);
     const consoleContainerRef = useRef(null);
 
@@ -17,30 +18,46 @@ export function Admin({ gameState, socket, combatResult }) {
 
     // Manage startTime based on NEW results
     useEffect(() => {
-        const resultKey = combatResult ? JSON.stringify(combatResult.log).slice(0, 100) + combatResult.log.length : null;
+        const baseKey = combatResult ? JSON.stringify(combatResult.log).slice(0, 100) : null;
+        const resultKey = combatResult ? baseKey + '+' + combatResult.log.length : null;
 
         if (!combatResult?.log) {
             setStartTime(null);
             lastResultKeyRef.current = null;
+            setCombatLogFinished(false);
             return;
         }
 
         // If it's a DIFFERENT result than we last saw, start the clock!
         if (lastResultKeyRef.current !== resultKey) {
+            if (!lastResultKeyRef.current || combatResult.log.length < 5) {
+                setStartTime(Date.now());
+                setCombatLogFinished(false);
+            } else {
+                const prevLenStr = lastResultKeyRef.current.split('+');
+                const prevLen = prevLenStr.length > 1 ? parseInt(prevLenStr[1]) : 0;
+                if (combatResult.log.length <= prevLen) {
+                    setStartTime(Date.now());
+                    setCombatLogFinished(false);
+                } else {
+                    // It's an append, just let things be
+                }
+            }
             lastResultKeyRef.current = resultKey;
-            setStartTime(Date.now());
         }
     }, [combatResult]);
 
     const handleStartSimulation = () => {
         // Force the UI into a fresh state immediately
         setStartTime(Date.now());
+        setCombatLogFinished(false);
         lastResultKeyRef.current = "FORCE_REFRESH_" + Date.now();
         socket.emit('adminStartSimulation');
     };
 
     const handleReset = () => {
         setStartTime(null);
+        setCombatLogFinished(false);
         lastResultKeyRef.current = null;
         socket.emit('adminResetSimulation');
     };
@@ -168,13 +185,58 @@ export function Admin({ gameState, socket, combatResult }) {
                 </div>
             </div>
 
-            {gameState?.pitStop?.active && (
-                <div className="bg-yellow-900/40 border border-yellow-500/50 p-4 rounded-xl flex items-center justify-center gap-4 animate-pulse">
-                    <Shield className="text-yellow-500" size={24} />
-                    <span className="text-yellow-400 font-black uppercase tracking-widest text-lg italic">
-                        PIT STOP IN PROGRESS: AWAITING PILOT RE-OPTIMIZATION
-                    </span>
-                    <Shield className="text-yellow-500" size={24} />
+            {combatResult && (
+                <div className={`border p-6 rounded-xl flex flex-col items-center gap-6 transition-all duration-500 ${gameState?.pitStop?.active && combatLogFinished
+                    ? 'bg-yellow-900/20 border-yellow-500/30 animate-in fade-in duration-500'
+                    : 'bg-slate-900/40 border-slate-800 opacity-50'
+                    }`}>
+                    <div className="flex items-center gap-4">
+                        <Shield className={gameState?.pitStop?.active && combatLogFinished ? 'text-yellow-500 animate-pulse' : 'text-slate-600'} size={24} />
+                        <span className={`font-black uppercase tracking-widest text-xl italic ${gameState?.pitStop?.active && combatLogFinished
+                            ? 'text-yellow-400 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]'
+                            : 'text-slate-500'
+                            }`}>
+                            {gameState?.pitStop?.active && combatLogFinished
+                                ? 'PIT STOP IN PROGRESS: OVERSEER OVERRIDE'
+                                : 'PIT STRATEGY CONTROL'}
+                        </span>
+                        <Shield className={gameState?.pitStop?.active && combatLogFinished ? 'text-yellow-500 animate-pulse' : 'text-slate-600'} size={24} />
+                    </div>
+
+                    {!(gameState?.pitStop?.active && combatLogFinished) && (
+                        <div className="flex items-center gap-2 text-slate-500 text-xs font-mono uppercase tracking-widest border border-slate-700 rounded-lg px-4 py-2 bg-slate-800/50">
+                            <Shield size={14} className="text-slate-600" />
+                            Pit Strategy Unlocks After Round 3
+                        </div>
+                    )}
+
+                    <div className={`flex flex-col md:flex-row gap-8 w-full justify-center ${!(gameState?.pitStop?.active && combatLogFinished) ? 'pointer-events-none select-none' : ''}`}>
+                        <div className="flex flex-col items-center gap-2 p-4 bg-cyan-950/30 border border-cyan-500/30 rounded-xl w-full max-w-[300px]">
+                            <span className="text-cyan-400 font-bold tracking-widest uppercase text-xs">Team Alpha Force Override</span>
+                            {gameState?.pitStop?.alphaChoice ? (
+                                <span className="text-white font-mono bg-cyan-900/50 px-3 py-1.5 rounded border border-cyan-500/50 text-xs w-full text-center">LOCKED: {gameState.pitStop.alphaChoice.toUpperCase()}</span>
+                            ) : (
+                                <div className="flex gap-1 w-full">
+                                    <button onClick={() => socket.emit('pilotPitStopChoice', { team: 'alpha', choice: 'overclock', isAdmin: true })} className="flex-1 text-[10px] font-bold py-1.5 px-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-500 text-white rounded disabled:opacity-40">OVERCLOCK</button>
+                                    <button onClick={() => socket.emit('pilotPitStopChoice', { team: 'alpha', choice: 'safety', isAdmin: true })} className="flex-1 text-[10px] font-bold py-1.5 px-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-500 text-white rounded disabled:opacity-40">SAFETY</button>
+                                    <button onClick={() => socket.emit('pilotPitStopChoice', { team: 'alpha', choice: 'defense', isAdmin: true })} className="flex-1 text-[10px] font-bold py-1.5 px-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-500 text-white rounded disabled:opacity-40">DEFENSE</button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col items-center gap-2 p-4 bg-orange-950/30 border border-orange-500/30 rounded-xl w-full max-w-[300px]">
+                            <span className="text-orange-400 font-bold tracking-widest uppercase text-xs">Team Omega Force Override</span>
+                            {gameState?.pitStop?.omegaChoice ? (
+                                <span className="text-white font-mono bg-orange-900/50 px-3 py-1.5 rounded border border-orange-500/50 text-xs w-full text-center">LOCKED: {gameState.pitStop.omegaChoice.toUpperCase()}</span>
+                            ) : (
+                                <div className="flex gap-1 w-full">
+                                    <button onClick={() => socket.emit('pilotPitStopChoice', { team: 'omega', choice: 'overclock', isAdmin: true })} className="flex-1 text-[10px] font-bold py-1.5 px-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-orange-500 text-white rounded disabled:opacity-40">OVERCLOCK</button>
+                                    <button onClick={() => socket.emit('pilotPitStopChoice', { team: 'omega', choice: 'safety', isAdmin: true })} className="flex-1 text-[10px] font-bold py-1.5 px-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-orange-500 text-white rounded disabled:opacity-40">SAFETY</button>
+                                    <button onClick={() => socket.emit('pilotPitStopChoice', { team: 'omega', choice: 'defense', isAdmin: true })} className="flex-1 text-[10px] font-bold py-1.5 px-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-orange-500 text-white rounded disabled:opacity-40">DEFENSE</button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -182,7 +244,7 @@ export function Admin({ gameState, socket, combatResult }) {
 
             {combatResult ? (
                 <div className="mt-8">
-                    <CombatLog logs={combatResult.log} winner={combatResult.winner} />
+                    <CombatLog logs={combatResult.log} winner={combatResult.winner} onFinished={(finished) => setCombatLogFinished(finished)} />
                 </div>
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Terminal, Zap, Flame, Target, Sword } from 'lucide-react';
 import { LiveStats } from './LiveStats';
 
-export function CombatLog({ logs, winner, instant = false }) {
+export function CombatLog({ logs, winner, instant = false, onFinished }) {
     const [startTime, setStartTime] = useState(null);
     const [now, setNow] = useState(Date.now());
     const lastLogsKeyRef = useRef(null);
@@ -18,25 +18,60 @@ export function CombatLog({ logs, winner, instant = false }) {
     // Manage startTime based on NEW logs
     useEffect(() => {
         if (instant) return;
-        const logsKey = logs ? JSON.stringify(logs).slice(0, 100) + logs.length : null;
+        // Strip the length from logsKey so we don't double up
+        const baseKey = logs ? JSON.stringify(logs).slice(0, 100) : null;
+        const logsKey = logs ? baseKey + '+' + logs.length : null;
 
         if (!logs) {
+            console.log('[CombatLog] No logs provided. Resetting startTime.');
             setStartTime(null);
             lastLogsKeyRef.current = null;
             return;
         }
 
+        console.log(`[CombatLog] Evaluated logsKey: ${logs.length} items. Prev key: ${lastLogsKeyRef.current ? lastLogsKeyRef.current.split('+')[1] : null}`);
+
         if (lastLogsKeyRef.current !== logsKey) {
+            if (!lastLogsKeyRef.current || logs.length < 5) {
+                console.log('[CombatLog] Brand new combat session (no prev key or < 5 logs). Set startTime to Date.now().');
+                setStartTime(Date.now());
+            } else {
+                const prevLenStr = lastLogsKeyRef.current.split('+');
+                const prevLen = prevLenStr.length > 1 ? parseInt(prevLenStr[1]) : 0;
+
+                if (logs.length > prevLen) {
+                    console.log(`[CombatLog] Identified as an append (len: ${logs.length} > ${prevLen}). Preserving startTime.`);
+                    // It's an append! Let it continue
+                    setStartTime(prev => {
+                        if (prev) {
+                            console.log(`[CombatLog] Using existing startTime: ${prev}`);
+                            return prev;
+                        } else {
+                            const newStart = Date.now() - ((logs.length - 1) * 1000);
+                            console.log(`[CombatLog] No existing startTime. Deriving: ${newStart}`);
+                            return newStart;
+                        }
+                    });
+                } else {
+                    console.log(`[CombatLog] Logs length ${logs.length} <= ${prevLen}. Resetting to Date.now().`);
+                    setStartTime(Date.now());
+                }
+            }
             lastLogsKeyRef.current = logsKey;
-            setStartTime(Date.now());
         }
     }, [logs, instant]);
 
     // Derive display state from elapsed time
     const elapsed = startTime ? now - startTime : 0;
-    const displayCount = Math.floor(elapsed / 1000);
-    const displayedLogs = instant ? (logs || []) : (logs ? logs.slice(0, displayCount) : []);
-    const isFinished = instant ? true : (logs ? displayCount >= logs.length : false);
+    const displayCount = instant ? (logs ? logs.length : 0) : Math.floor(elapsed / 1000);
+    const displayedLogs = logs ? logs.slice(0, displayCount) : [];
+    const isFinished = logs ? displayCount >= logs.length : false;
+
+    useEffect(() => {
+        if (onFinished) {
+            onFinished(isFinished);
+        }
+    }, [isFinished, onFinished]);
 
     // Find latest state for visualization
     const currentState = displayedLogs.length > 0 ? displayedLogs[displayedLogs.length - 1].state : null;
