@@ -5,7 +5,6 @@ import { LiveStats } from './LiveStats';
 export function CombatLog({ logs, winner, instant = false, onFinished }) {
     const [startTime, setStartTime] = useState(null);
     const [now, setNow] = useState(Date.now());
-    const lastLogsKeyRef = useRef(null);
     const scrollContainerRef = useRef(null);
 
     // Drive the animation with a high-frequency ticker
@@ -15,50 +14,34 @@ export function CombatLog({ logs, winner, instant = false, onFinished }) {
         return () => clearInterval(timer);
     }, [instant]);
 
-    // Manage startTime based on NEW logs
+    // Manage startTime based on new vs appended logs
+    const lastLogLengthRef = useRef(null);
+
     useEffect(() => {
         if (instant) return;
-        // Strip the length from logsKey so we don't double up
-        const baseKey = logs ? JSON.stringify(logs).slice(0, 100) : null;
-        const logsKey = logs ? baseKey + '+' + logs.length : null;
 
         if (!logs) {
-            console.log('[CombatLog] No logs provided. Resetting startTime.');
             setStartTime(null);
-            lastLogsKeyRef.current = null;
+            lastLogLengthRef.current = null;
             return;
         }
 
-        console.log(`[CombatLog] Evaluated logsKey: ${logs.length} items. Prev key: ${lastLogsKeyRef.current ? lastLogsKeyRef.current.split('+')[1] : null}`);
+        const currentLen = logs.length;
+        const prevLen = lastLogLengthRef.current;
 
-        if (lastLogsKeyRef.current !== logsKey) {
-            if (!lastLogsKeyRef.current || logs.length < 5) {
-                console.log('[CombatLog] Brand new combat session (no prev key or < 5 logs). Set startTime to Date.now().');
-                setStartTime(Date.now());
-            } else {
-                const prevLenStr = lastLogsKeyRef.current.split('+');
-                const prevLen = prevLenStr.length > 1 ? parseInt(prevLenStr[1]) : 0;
-
-                if (logs.length > prevLen) {
-                    console.log(`[CombatLog] Identified as an append (len: ${logs.length} > ${prevLen}). Preserving startTime.`);
-                    // It's an append! Let it continue
-                    setStartTime(prev => {
-                        if (prev) {
-                            console.log(`[CombatLog] Using existing startTime: ${prev}`);
-                            return prev;
-                        } else {
-                            const newStart = Date.now() - ((logs.length - 1) * 1000);
-                            console.log(`[CombatLog] No existing startTime. Deriving: ${newStart}`);
-                            return newStart;
-                        }
-                    });
-                } else {
-                    console.log(`[CombatLog] Logs length ${logs.length} <= ${prevLen}. Resetting to Date.now().`);
-                    setStartTime(Date.now());
-                }
-            }
-            lastLogsKeyRef.current = logsKey;
+        if (prevLen === null) {
+            // Brand new combat session
+            setStartTime(Date.now());
+        } else if (currentLen > prevLen) {
+            // Phase 2 append — keep the SAME startTime so animation
+            // continues naturally from where it left off.
+            // No-op: startTime is unchanged, the ticker drives displayCount forward.
+        } else if (currentLen < prevLen) {
+            // Completely new/reset combat
+            setStartTime(Date.now());
         }
+
+        lastLogLengthRef.current = currentLen;
     }, [logs, instant]);
 
     // Derive display state from elapsed time
