@@ -26,7 +26,13 @@ const gameState = {
         omega: { players: [], build: {}, sequence: [null, null, null, null, null] }
     },
     status: 'lobby', // 'lobby', 'building', 'combat'
-    homeTeam: 'neutral' // 'alpha', 'omega', or 'neutral'
+    homeTeam: 'neutral', // 'alpha', 'omega', or 'neutral'
+    pitStop: {
+        active: false,
+        alphaChoice: null,
+        omegaChoice: null,
+        resumeState: null
+    }
 };
 
 const matchHistory = []; // full match objects including logs, up to 50
@@ -130,45 +136,106 @@ io.on('connection', (socket) => {
                         gameState.homeTeam
                     );
 
-                    const r = Math.floor(Math.random() * 900) + 100;
-                    const dateStr = new Date().toISOString().split('T')[0];
-                    const matchId = `${r}-${dateStr}`;
+                    if (result.isPitStop) {
+                        gameState.pitStop = {
+                            active: true,
+                            alphaChoice: null,
+                            omegaChoice: null,
+                            resumeState: result
+                        };
+                        io.emit('gameState', gameState);
+                        io.emit('combatResult', result);
+                        console.log('[SYS] Combat paused for Pit Stop');
+                        return; // Wait for choices
+                    }
 
-                    const matchData = {
-                        id: matchId,
-                        timestamp: Date.now(),
-                        winner: result.winner,
-                        log: result.log,
-                        alpha: { build: { ...gameState.teams.alpha.build }, sequence: [...gameState.teams.alpha.sequence] },
-                        omega: { build: { ...gameState.teams.omega.build }, sequence: [...gameState.teams.omega.sequence] }
-                    };
-
-                    matchHistory.unshift(matchData);
-                    if (matchHistory.length > 50) matchHistory.pop();
-
-                    io.emit('combatResult', result);
-                    io.emit('matchHistory', matchHistory.map(m => ({ id: m.id, timestamp: m.timestamp, winner: m.winner })));
+                    completeSimulation(result);
                 } catch (err) {
                     console.error('[SYS] Combat Engine Error:', err);
                 }
-
-                // Reset for next match after 15s
-                setTimeout(() => {
-                    gameState.teams.alpha.ready = false;
-                    gameState.teams.omega.ready = false;
-                    gameState.status = 'lobby';
-                    io.emit('gameState', gameState);
-                    // Do not emit null combatResult so admin telemetry stays up
-                }, 15000);
             }).catch(err => {
                 console.error('[SYS] Import Error:', err);
-                gameState.teams.alpha.ready = false;
-                gameState.teams.omega.ready = false;
-                gameState.status = 'lobby';
-                io.emit('gameState', gameState);
             });
         }
     });
+
+    const completeSimulation = (result) => {
+        const r = Math.floor(Math.random() * 900) + 100;
+        const dateStr = new Date().toISOString().split('T')[0];
+        const matchId = `${r}-${dateStr}`;
+
+        const matchData = {
+            id: matchId,
+            timestamp: Date.now(),
+            winner: result.winner,
+            log: result.log,
+            alpha: { build: { ...gameState.teams.alpha.build }, sequence: [...gameState.teams.alpha.sequence] },
+            omega: { build: { ...gameState.teams.omega.build }, sequence: [...gameState.teams.omega.sequence] }
+        };
+
+        matchHistory.unshift(matchData);
+        if (matchHistory.length > 50) matchHistory.pop();
+
+        io.emit('combatResult', result);
+        io.emit('matchHistory', matchHistory.map(m => ({ id: m.id, timestamp: m.timestamp, winner: m.winner })));
+
+        // Reset for next match after 15s
+        setTimeout(() => {
+            gameState.teams.alpha.ready = false;
+            gameState.teams.omega.ready = false;
+            gameState.status = 'lobby';
+            gameState.pitStop = { active: false, alphaChoice: null, omegaChoice: null, resumeState: null };
+            io.emit('gameState', gameState);
+        }, 15000);
+    };
+
+    socket.on('pilotPitStopChoice', ({ team, choice }) => {
+        if (gameState.pitStop.active && (team === 'alpha' || team === 'omega')) {
+            gameState.pitStop[`${team}Choice`] = choice;
+            console.log(`[SYS] Pit Stop selection from ${team}: ${choice}`);
+            io.emit('gameState', gameState);
+
+            // If both human choices are in (or if it's the only human subbed)
+            // For now, let's wait for both or auto-fill after a delay
+            checkPitStopCompletion();
+        }
+    });
+
+    const checkPitStopCompletion = () => {
+        // Simple logic: if anyone hasn't picked, and they have no human players, auto-pick.
+        // Or if both teams picked, proceed.
+        const teams = ['alpha', 'omega'];
+        teams.forEach(t => {
+            if (!gameState.pitStop[`${t}Choice`] && (gameState.teams[t].players.length === 0)) {
+                const choices = ['overclock', 'safety', 'defense'];
+                gameState.pitStop[`${t}Choice`] = choices[Math.floor(Math.random() * choices.length)];
+            }
+        });
+
+        if (gameState.pitStop.alphaChoice && gameState.pitStop.omegaChoice) {
+            resumeCombat();
+        }
+    };
+
+    const resumeCombat = () => {
+        if (!gameState.pitStop.active) return;
+        gameState.pitStop.active = false;
+
+        import('./combatEngine.js').then(module => {
+            const { runSimulation } = module;
+            const result = runSimulation(
+                gameState.teams.alpha.build, gameState.teams.alpha.sequence,
+                gameState.teams.omega.build, gameState.teams.omega.sequence,
+                gameState.homeTeam,
+                {
+                    ...gameState.pitStop.resumeState,
+                    alphaChoice: gameState.pitStop.alphaChoice,
+                    omegaChoice: gameState.pitStop.omegaChoice
+                }
+            );
+            completeSimulation(result);
+        });
+    };
 
     socket.on('disconnect', () => {
         console.log(`[SYS] User disconnected: ${socket.id}`);

@@ -21,10 +21,12 @@ function resolveStats(build) {
     return { ...stats, passiveHeat, currentSI: stats.si, currentEN: stats.enCapacity, currentHeat: 0, stunTurns: 0 };
 }
 
-export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq, homeTeam) {
-    const log = [];
-    const alpha = resolveStats(alphaBuild);
-    const omega = resolveStats(omegaBuild);
+export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq, homeTeam, resumeState = null) {
+    const log = resumeState ? resumeState.log : [];
+    const alpha = resumeState ? resumeState.alphaState : resolveStats(alphaBuild);
+    const omega = resumeState ? resumeState.omegaState : resolveStats(omegaBuild);
+
+    let turn = resumeState ? resumeState.turn : 0;
 
     const addLog = (type, msg, actionData = null) => {
         log.push({
@@ -61,8 +63,10 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq, homeTe
     addLog('initiative', `${alphaGoesFirst ? 'Alpha' : 'Omega'} seizes initiative!`);
 
     let winner = null;
+    // turn is handled above
 
-    for (let turn = 0; turn < 5; turn++) {
+    // Phase 1: Initiation
+    for (; turn < 3; turn++) {
         addLog('turn', `--- ROUND ${turn + 1} START ---`);
 
         const resolveStrike = (attacker, defender, side, targetSide, moveId) => {
@@ -146,6 +150,47 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq, homeTe
                 winner = side;
             }
         };
+
+        // Phase 4: Governor
+        alpha.currentHeat += alpha.passiveHeat;
+        omega.currentHeat += omega.passiveHeat;
+    }
+
+    // PIT STOP CHECK
+    if (!winner && turn === 3) {
+        addLog('pitstop', `INTERMISSION: PIT STOP TRIGGERED. Awaiting pilot optimizations for Phase 2.`);
+        return {
+            log,
+            winner: null,
+            isPitStop: true,
+            turn: 3,
+            alphaState: { ...alpha },
+            omegaState: { ...omega }
+        };
+    }
+
+    const applyPitStop = (mech, choice) => {
+        if (choice === 'overclock') {
+            mech.speed *= 1.15;
+            mech.passiveHeat *= 1.30;
+        } else if (choice === 'safety') {
+            mech.speed *= 0.80;
+            mech.passiveHeat *= 0.50;
+        } else if (choice === 'defense') {
+            mech.stability *= 1.20;
+            // No explicit Evasion stat but weight-based logic exists
+            mech.weight *= 1.15; // Increasing weight reduces hitChance and dmgReduction logic
+        }
+    };
+
+    if (resumeState) {
+        applyPitStop(alpha, resumeState.alphaChoice);
+        applyPitStop(omega, resumeState.omegaChoice);
+    }
+
+    // FINAL PHASE (Rounds 4-5) - Only happens if called with pit stop data
+    for (; turn < 5; turn++) {
+        addLog('turn', `--- ROUND ${turn + 1} START ---`);
 
         // Attack Sequence
         if (alphaGoesFirst) {

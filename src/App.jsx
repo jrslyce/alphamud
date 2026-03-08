@@ -5,6 +5,7 @@ import { Builder } from './components/Builder';
 import { CombatLog } from './components/CombatLog';
 import { Admin } from './components/Admin';
 import { HistoryViewer } from './components/HistoryViewer';
+import { PitStopOverlay } from './components/PitStopOverlay';
 
 const SOCKET_URL = import.meta.env.PROD
   ? 'https://sfc-alpha-mud-backend-372490992828.us-central1.run.app'
@@ -166,7 +167,20 @@ export default function App() {
             </div>
 
             {combatResult ? (
-              <CombatLog logs={combatResult.log} winner={combatResult.winner} />
+              <>
+                <CombatLog
+                  logs={combatResult.log}
+                  winner={combatResult.winner}
+                />
+
+                {gameState?.pitStop?.active && (
+                  <PitStopOverlay
+                    team={myTeam}
+                    onSelect={(choice) => socket.emit('pilotPitStopChoice', { team: myTeam, choice })}
+                    hasSelected={!!gameState.pitStop[`${myTeam}Choice`]}
+                  />
+                )}
+              </>
             ) : (
               <>
                 <Builder

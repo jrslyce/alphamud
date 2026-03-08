@@ -168,6 +168,16 @@ export function Admin({ gameState, socket, combatResult }) {
                 </div>
             </div>
 
+            {gameState?.pitStop?.active && (
+                <div className="bg-yellow-900/40 border border-yellow-500/50 p-4 rounded-xl flex items-center justify-center gap-4 animate-pulse">
+                    <Shield className="text-yellow-500" size={24} />
+                    <span className="text-yellow-400 font-black uppercase tracking-widest text-lg italic">
+                        PIT STOP IN PROGRESS: AWAITING PILOT RE-OPTIMIZATION
+                    </span>
+                    <Shield className="text-yellow-500" size={24} />
+                </div>
+            )}
+
             <div id="telemetry" data-elapsed={elapsed} data-count={displayCount} data-start={startTime} data-now={now} className="hidden"></div>
 
             {combatResult ? (
