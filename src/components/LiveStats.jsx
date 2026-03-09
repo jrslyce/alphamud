@@ -89,12 +89,11 @@ export function LiveStats({ state, winner, isFinished }) {
                         color="bg-emerald-400"
                         icon={Zap}
                     />
-                    {/* Assuming heatLimit is around 200 based on standard parts, setting max visually to 200 or scaling it */}
                     <StatBar
                         label="Thermal Level"
                         current={data.heat}
-                        max={200}
-                        color={data.heat > 150 ? 'bg-red-600 animate-pulse' : 'bg-red-400'}
+                        max={data.maxHeat || 500}
+                        color={data.heat > (data.maxHeat || 500) * 0.75 ? 'bg-red-600 animate-pulse' : 'bg-red-400'}
                         icon={Flame}
                     />
 

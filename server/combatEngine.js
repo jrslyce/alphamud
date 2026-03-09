@@ -37,13 +37,15 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq, homeTe
                 alpha: {
                     hp: alpha.currentSI, maxHp: alpha.si,
                     en: alpha.currentEN, maxEn: alpha.enCapacity,
-                    heat: alpha.currentHeat, compute: alpha.compute,
+                    heat: alpha.currentHeat, maxHeat: alpha.heatLimit,
+                    compute: alpha.compute,
                     stability: alpha.stability, speed: alpha.speed
                 },
                 omega: {
                     hp: omega.currentSI, maxHp: omega.si,
                     en: omega.currentEN, maxEn: omega.enCapacity,
-                    heat: omega.currentHeat, compute: omega.compute,
+                    heat: omega.currentHeat, maxHeat: omega.heatLimit,
+                    compute: omega.compute,
                     stability: omega.stability, speed: omega.speed
                 }
             }
@@ -163,8 +165,8 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq, homeTe
         if (winner) break;
 
         // Phase 4: Governor
-        alpha.currentHeat += alpha.passiveHeat;
-        omega.currentHeat += omega.passiveHeat;
+        alpha.currentHeat = Math.max(0, alpha.currentHeat + alpha.passiveHeat - alpha.dissipation);
+        omega.currentHeat = Math.max(0, omega.currentHeat + omega.passiveHeat - omega.dissipation);
     }
 
     // PIT STOP CHECK
@@ -226,8 +228,8 @@ export function runSimulation(alphaBuild, alphaSeq, omegaBuild, omegaSeq, homeTe
         if (winner) break;
 
         // Phase 4: Governor
-        alpha.currentHeat += alpha.passiveHeat;
-        omega.currentHeat += omega.passiveHeat;
+        alpha.currentHeat = Math.max(0, alpha.currentHeat + alpha.passiveHeat - alpha.dissipation);
+        omega.currentHeat = Math.max(0, omega.currentHeat + omega.passiveHeat - omega.dissipation);
     }
 
     if (!winner) {
