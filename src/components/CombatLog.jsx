@@ -33,9 +33,9 @@ export function CombatLog({ logs, winner, instant = false, onFinished }) {
             // Brand new combat session
             setStartTime(Date.now());
         } else if (currentLen > prevLen) {
-            // Phase 2 append — keep the SAME startTime so animation
-            // continues naturally from where it left off.
-            // No-op: startTime is unchanged, the ticker drives displayCount forward.
+            // Phase 2 append — reset startTime so animation continues 
+            // smoothly exactly from the previous log index.
+            setStartTime(Date.now() - prevLen * 1000);
         } else if (currentLen < prevLen) {
             // Completely new/reset combat
             setStartTime(Date.now());

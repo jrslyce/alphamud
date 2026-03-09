@@ -227,6 +227,7 @@ io.on('connection', (socket) => {
     const resumeCombat = () => {
         if (!gameState.pitStop.active) return;
         gameState.pitStop.active = false;
+        io.emit('gameState', gameState);
 
         import('./combatEngine.js').then(module => {
             const { runSimulation } = module;
