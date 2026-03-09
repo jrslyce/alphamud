@@ -240,7 +240,7 @@ export default function App() {
         )}
 
         <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest pt-8 pb-4">
-          AAA Sport • Deterministic MUD Engine v0.1.0
+          AAA Sport • Deterministic MUD Engine v0.1.{__COMMIT_COUNT__} ({__COMMIT_HASH__})
         </p>
 
         {!isAdminRoute && <HistoryViewer matchHistory={matchHistory} socket={socket} />}
